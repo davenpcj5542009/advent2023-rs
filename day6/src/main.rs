@@ -8,17 +8,23 @@ fn str_to_vec(somestr: &str, skip:usize) -> Vec<u32> {
     somestr.split_ascii_whitespace().skip(skip).map(|s| u32::from_str_radix(s, 10).expect("string to be sequence of u32")).collect()
 }
 
+fn str_to_joined(somestr: &str, skip:usize) -> u64 {
+    let s:String = somestr.split_ascii_whitespace().skip(skip).collect();
+    if DEBUG { eprintln!("'{}' => {}", somestr, &s) };   
+    s.parse().expect("u64 string")
+}
+
 const ACCEL:u32 = 1; // 1 ms-per-ms
 
-fn distance(hold_time: u32, race_time: u32) -> u32 {
+fn distance(hold_time: u32, race_time: u32) -> u64 {
     if hold_time >= race_time {
         return 0;
     }
 
-    return (race_time-hold_time)*(hold_time);
+    return (race_time-hold_time) as u64 *(hold_time as u64);
 }
 
-fn ways_to_win(racetime: u32, record: u32) -> u32 {
+fn ways_to_win(racetime: u32, record: u64) -> u32 {
     let mut ways_to_win = 0;
     for t in 1..racetime {
         if distance(t, racetime) > record {
@@ -50,8 +56,17 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     
     let mut margin_error = 1;
     for race in 0..times.len() {
-        margin_error *= ways_to_win(times[race], records[race]);
+        margin_error *= ways_to_win(times[race], records[race] as u64);
     }
+    
+    if DEBUG { eprintln!("margin_error: {:?}", &margin_error) };
+
+    eprintln!("PART TWO");
+
+    let times = str_to_joined(&times_str, 1) as u32;
+    let record = str_to_joined(&dist_str, 1);
+
+    let mut margin_error = ways_to_win(times, record);
     
     if DEBUG { eprintln!("margin_error: {:?}", &margin_error) };
 
