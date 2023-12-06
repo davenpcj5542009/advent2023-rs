@@ -1,28 +1,28 @@
 use std::collections::{HashMap, VecDeque};
 use std::io::{Lines, BufRead, BufReader};
-use std::ops::Range;
+use std::ops::{Range, RangeInclusive};
 
 use anyhow::{Context,Error};
-use rangemap::RangeMap;
+use rangemap::RangeInclusiveMap;
 
-const DEBUG:bool = true;
+const DEBUG:bool = cfg!(debug_assertions);
 
-fn loadmap<T:BufRead>(lines: &mut Lines<T>) -> Result<(String, String, RangeMap<u32, Range<u32>>),Error> {
+fn loadmap<T:BufRead>(lines: &mut Lines<T>) -> Result<(String, String, RangeInclusiveMap<u32, RangeInclusive<u32>>),Error> {
     // item-to-item map:
     // 50 98 2    // start output range, start input range, range length
 
     let mapname_str = lines.next().context("looking for item-to-item-map name string")?.unwrap();
     let (fromname, toname) = mapname_str.split_whitespace().next().with_context(||format!("missing space in map name '{}'", mapname_str))?.split_once("-to-").expect("missing separating phrase -to- in item-to-item map");
 
-    let mut map = RangeMap::new();
+    let mut map = RangeInclusiveMap::new();
 
     while let Some(Ok(line)) = lines.next() {
         if line.is_empty() { break; }
 
         let inputs = str_to_vec(&line,0);
         if DEBUG { eprintln!("mapinput '{line}'->{:?}", &inputs) }
-        let t = inputs[0]..inputs[0]+inputs[2];
-        let f = inputs[1]..inputs[1]+inputs[2];
+        let t = inputs[0]..=inputs[0]+(inputs[2]-1);
+        let f = inputs[1]..=inputs[1]+(inputs[2]-1);
         map.insert(f, t);
     }
     if DEBUG { eprintln!("item map: '{fromname}' to '{toname}'\n{:?}", &map) };
@@ -30,16 +30,19 @@ fn loadmap<T:BufRead>(lines: &mut Lines<T>) -> Result<(String, String, RangeMap<
 }
 
 fn str_to_vec(somestr: &str, skip:usize) -> Vec<u32> {
-    somestr.split_ascii_whitespace().skip(skip).map(|s| u32::from_str_radix(s, 10).expect("string to be sequence of u32")).collect()
+    somestr.split_ascii_whitespace().skip(skip).map(|s| s.parse().expect("string to be sequence of u32")).collect()
 }
 
-fn convert_location(seed: u32, maps: &Vec<&RangeMap<u32,Range<u32>>>) -> u32 {
+fn convert_location(seed: u32, maps: &Vec<&RangeInclusiveMap<u32,RangeInclusive<u32>>>) -> u32 {
     let mut dest = seed;
     if DEBUG { eprint!("{seed}") };
     for &map in maps {
         dest = match map.get_key_value(&dest) {
             // 79, given 50..(50+48) => 52, should be 81
-            Some((input,output)) => { dest - input.start + output.start },
+            Some((input,output)) => { 
+                if DEBUG { eprint!("{{{dest}-{}+{}}}", input.start(), output.start())}
+                dest - input.start() + output.start() 
+            },
             None => dest,
         };
         if DEBUG { eprint!(" => {dest}") };
@@ -83,13 +86,13 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
 
             if strentry == ("seed", current) {  /* terminus */
                 if DEBUG { eprint!("{} <= ", current); }
-                deque.push(maps.get(entry).unwrap());
+                deque.insert(0,maps.get(entry).unwrap());
                 break 'mapsearch;
             }
             
             if strentry.1 == current { /* matching intermediate */ 
                 if DEBUG { eprint!("{} <= ", current); }
-                deque.push(maps.get(&entry).unwrap());
+                deque.insert(0,maps.get(&entry).unwrap());
                 current = strentry.0;
                 continue 'mapsearch;    // restart loop
             }
@@ -164,9 +167,9 @@ fn testinput2() {
     52 50 48
 
     ";
-    let mut rmap: RangeMap<u32,Range<u32>> = RangeMap::new();
-    rmap.insert(98..100, 50..52);
-    rmap.insert(50..98, 52..100);
+    let mut rmap: RangeInclusiveMap<u32,RangeInclusive<u32>> = RangeInclusiveMap::new();
+    rmap.insert(98..=100, 50..=52);
+    rmap.insert(50..=98, 52..=100);
     assert_eq!(loadmap(&mut testinput.as_bytes().lines()).unwrap(), (String::from("seed"), String::from("soil"), rmap));
 }
 
@@ -188,9 +191,9 @@ fn testinput3() {
 
 #[test]
 fn test3() {
-    let mut rmap: RangeMap<u32,Range<u32>> = RangeMap::new();
-    rmap.insert(50..52, 98..100);
-    rmap.insert(52..100,50..98);
+    let mut rmap: RangeInclusiveMap<u32,RangeInclusive<u32>> = RangeInclusiveMap::new();
+    rmap.insert(50..=52, 98..=100);
+    rmap.insert(52..=100,50..=98);
 
     let mut v = Vec::new();
     v.push(&rmap);
@@ -207,14 +210,14 @@ fn test3() {
 fn test4() {
     let mut v = Vec::new();
 
-    let mut rmap: RangeMap<u32,Range<u32>> = RangeMap::new();
-    rmap.insert(50..52, 76..79);
-    rmap.insert(52..100,50..98);
+    let mut rmap: RangeInclusiveMap<u32,RangeInclusive<u32>> = RangeInclusiveMap::new();
+    rmap.insert(50..=52, 76..=79);
+    rmap.insert(52..=100,50..=98);
     v.push(&rmap);
 
-    let mut rmap: RangeMap<u32,Range<u32>> = RangeMap::new();
-    rmap.insert(75..77, 98..100);
-    rmap.insert(102..150,50..98);
+    let mut rmap: RangeInclusiveMap<u32,RangeInclusive<u32>> = RangeInclusiveMap::new();
+    rmap.insert(75..=77, 98..=100);
+    rmap.insert(102..=150,50..=98);
     v.push(&rmap);
 
     assert_eq!(convert_location(1, &v), 1);
