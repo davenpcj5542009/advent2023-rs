@@ -106,6 +106,11 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     let min_loc = seedlist.iter().map(|seed|convert_location(*seed, &deque)).min().expect("empty seedlist");
     println!("{min_loc}");
 
+    // PART TWO. The seed numbers are ranges, with the start and length in each pair
+    let min_loc = seedlist.chunks(2).map(|chunk|RangeInclusive::new(chunk[0], chunk[0]+(chunk[1]-1)).into_iter()).flatten()
+        .map(|seed|convert_location(seed, &deque)).min().expect("empty seedlist");
+    println!("{min_loc}");
+
     return Ok(());
 }
 
