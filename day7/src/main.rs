@@ -6,7 +6,8 @@ use anyhow::{Error};
 const DEBUG:bool = cfg!(debug_assertions);
 
 fn cardvalue(card: char) -> u32 {
-    "23456789TJQKA".find(card).expect("bad card value") as u32 + 2
+    // reorder for joker
+    "J23456789TQKA".find(card).expect("bad card value") as u32 + 2
 }
 
 #[derive(Debug,PartialOrd,PartialEq)]
@@ -27,6 +28,15 @@ impl Hand {
         let mut counts = HashMap::<char, u32>::new();
         for card in self.0.chars() {
             counts.entry(card).and_modify(|c| *c += 1).or_insert(1);
+        }
+
+        // get the joker
+        if let Some(&jokers) = counts.get(&'J') {
+            if jokers != 5 {
+                counts.remove(&'J');
+                let maxentry = counts.iter_mut().max_by(|l,r| l.1.cmp(&r.1)).unwrap();
+                *maxentry.1 += jokers;
+            }
         }
 
         match counts.len() {
@@ -134,6 +144,7 @@ fn test1() {
     assert_eq!(testhand.count_cards(), HandType::OnePair);
 
     let testhand = Hand("T55J5".to_owned());
-    assert_eq!(testhand.count_cards(), HandType::ThreeKind);
+    // update for joker
+    assert_eq!(testhand.count_cards(), HandType::FourKind);
 }
 
