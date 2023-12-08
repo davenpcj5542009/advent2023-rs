@@ -37,6 +37,35 @@ fn followmap(directions:&String, maps:&HashMap<String,(String,String)>) -> u32 {
     return steps;
 }
 
+// in part 2, ghosts follow all paths simultaneously
+fn followmap_ghost(directions:&String, maps:&HashMap<String,(String,String)>) -> u32 {
+    let mut steps = 0;
+    let mut locations:Vec<&String> = maps.iter().filter_map(
+        |(k,_v)| {
+            if k.ends_with("A") { Some(k) } else { None }
+    }).collect();
+    if DEBUG { eprintln!("starting {locations:?}") };
+    for step in repeat(directions.chars()).flatten() {
+        let mut new_locations = Vec::new();
+        for location in locations {
+            let fork = maps.get(location).unwrap();
+            let new_location = match step {
+                'L' => &fork.0,
+                'R' => &fork.1,
+                _ => panic!("unknown step"),
+            };
+            new_locations.push(new_location);
+        }
+        locations = new_locations;
+        steps += 1;
+        if DEBUG { eprintln!("{steps}: {step} => {locations:?}") };
+        if locations.iter().all(|loc|loc.ends_with('Z')) { 
+            break; 
+        }
+    }
+    return steps;
+}
+
 fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // map navigation
     // puzzle input, line of directions, lines of path forks
@@ -58,14 +87,14 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
 
     if DEBUG { eprintln!("pathmap: {:?}", &maps) };
 
+    // PART TWO
+    eprintln!("PART TWO");
+
     // follow the map steps
-    let steps = followmap(&directions, &maps);
+    let steps = followmap_ghost(&directions, &maps);
 
     // output the steps required
     println!("{steps}");
-
-    // PART TWO
-    eprintln!("PART TWO");
 
     return Ok(());
 }
