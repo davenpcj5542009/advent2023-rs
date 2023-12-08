@@ -8,6 +8,16 @@ fn str_to_vec(somestr: &str, skip:usize) -> Vec<u32> {
     somestr.split_ascii_whitespace().skip(skip).map(|s| u32::from_str_radix(s, 10).expect("string to be sequence of u32")).collect()
 }
 
+fn get_calibration(calib_str:&String) -> u32 {
+    let first = calib_str.find(|c:char|c.is_ascii_digit()).unwrap();
+    let last = calib_str.rfind(|c:char|c.is_ascii_digit()).unwrap();
+
+    let calib:u32 = [first,last].iter().map(|idx|calib_str.chars().nth(*idx).unwrap()).collect::<String>().parse().expect("a number");
+    if DEBUG { eprintln!("{calib_str} => {calib}") };
+
+    return calib;
+}
+
 fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // trebuchet calibration
     // 1abc2
@@ -18,10 +28,8 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     let mut calib_sum = 0;
 
     while let Some(Ok(calib_str)) = lines.next() {
-        let first = calib_str.find(|c:char|c.is_ascii_digit()).unwrap();
-        let last = calib_str.rfind(|c:char|c.is_ascii_digit()).unwrap();
 
-        let calib:u32 = [first,last].iter().map(|idx|calib_str.chars().nth(*idx).unwrap()).collect::<String>().parse().expect("a number");
+        let calib:u32 = get_calibration(&calib_str);
         if DEBUG { eprintln!("{calib_str} => {calib}") };
         calib_sum += calib;
     }
