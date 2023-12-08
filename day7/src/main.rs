@@ -11,7 +11,7 @@ fn cardvalue(card: char) -> u32 {
 
 #[derive(Debug,PartialOrd,PartialEq)]
 enum HandType {
-    HighCard(u32),
+    HighCard,//(u32),
     OnePair,
     TwoPair,
     ThreeKind,
@@ -25,18 +25,12 @@ struct Hand(String);
 impl Hand {
     fn count_cards(&self) -> HandType {
         let mut counts = HashMap::<char, u32>::new();
-        let mut maxcard = 0;
         for card in self.0.chars() {
-            // grab the max for high card
-            let cv = cardvalue(card);
-            if cv > maxcard {
-                maxcard = cv;
-            }
             counts.entry(card).and_modify(|c| *c += 1).or_insert(1);
         }
 
         match counts.len() {
-            5 => HandType::HighCard(maxcard),
+            5 => HandType::HighCard,
             4 => HandType::OnePair,
             3 => {
                 for (_,count) in counts.iter() {
@@ -68,11 +62,13 @@ impl PartialOrd for Hand {
         let left = self.count_cards();
         let right = other.count_cards();
         if left == right {
-            if let (HandType::HighCard(lvalue),HandType::HighCard(rvalue)) = (left,right) {
-                if lvalue != rvalue {
-                    return lvalue.partial_cmp(&rvalue);
-                }
-            }
+            // actually.... HighCard doesn't win on the value of the HighCard.
+            // if let (HandType::HighCard(lvalue),HandType::HighCard(rvalue)) = (left,right) {
+            //     if lvalue != rvalue {
+            //         return lvalue.partial_cmp(&rvalue);
+            //     }
+            // }
+
             // all else equal, compare card values in order
             return Some(self.0.chars().map(cardvalue).cmp(other.0.chars().map(cardvalue)));
         } else {
