@@ -18,6 +18,25 @@ fn loadmap(map:&mut HashMap<String,(String,String)>, line: &String) {
     map.insert(key.to_owned(), (left.to_owned(), right.to_owned()));
 }
 
+fn followmap(directions:&String, maps:&HashMap<String,(String,String)>) -> u32 {
+    let mut steps = 0;
+    let mut location = "AAA";
+    for step in repeat(directions.chars()).flatten() {
+        let fork = maps.get(location).unwrap();
+        location = match step {
+            'L' => fork.0.as_str(),
+            'R' => fork.1.as_str(),
+            _ => panic!("unknown step"),
+        };
+        steps += 1;
+        if DEBUG { eprintln!("{steps}: {step} => {location}") };
+        if location == "ZZZ" { 
+            break; 
+        }
+    }
+    return steps;
+}
+
 fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // map navigation
     // puzzle input, line of directions, lines of path forks
@@ -40,27 +59,13 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     if DEBUG { eprintln!("pathmap: {:?}", &maps) };
 
     // follow the map steps
-    let mut steps = 0;
-    let mut location = "AAA";
-    for step in repeat(directions.chars()).flatten() {
-        let fork = maps.get(location).unwrap();
-        location = match step {
-            'L' => fork.0.as_str(),
-            'R' => fork.1.as_str(),
-            _ => panic!("unknown step"),
-        };
-        steps += 1;
-        if DEBUG { eprintln!("{steps}: {step} => {location}") };
-        if location == "ZZZ" { 
-            break; 
-        }
-    }
+    let steps = followmap(&directions, &maps);
 
     // output the steps required
     println!("{steps}");
 
     // PART TWO
-    // eprintln!("PART TWO");
+    eprintln!("PART TWO");
 
     return Ok(());
 }
@@ -109,4 +114,22 @@ fn test2() {
     eprintln!("{res}");
     assert_eq!(res, String::from_iter(repeat("LR").take(10)));
     assert_eq!(res.len(), 20);
+}
+
+#[test]
+fn part2_example() -> Result<(),Error> {
+    let testinput = 
+r"LR
+
+11A = (11B, XXX)
+11B = (XXX, 11Z)
+11Z = (11B, XXX)
+22A = (22B, XXX)
+22B = (22C, 22C)
+22C = (22Z, 22Z)
+22Z = (22B, 22B)
+XXX = (XXX, XXX)
+";
+
+    go(&mut testinput.as_bytes())
 }
