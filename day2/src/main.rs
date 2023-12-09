@@ -37,6 +37,21 @@ fn check_game(game: &Vec<RGB>) -> bool {
     return check;
 }
 
+fn game_power(game: &Vec<RGB>) -> u32 {
+    let power;
+
+    let min = game.iter().fold(RGB(0,0,0),|last,next| {
+        RGB(u32::max(last.0,next.0),
+            u32::max(last.1, next.1),
+            u32::max(last.2, next.2),
+        )
+    });
+
+    power = min.0 * min.1 * min.2;
+    if DEBUG { eprintln!("'{game:?}'=> power {power}")}
+    return power;
+}
+
 fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // cube conundrum
     // puzzle input
@@ -52,9 +67,7 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // compute the result
     let mut game_count = 0;
     for game in games.iter() {
-        if check_game(&game.1) {
-            game_count += game.0;
-        }
+        game_count += game_power(&game.1);
     }
 
     // output the result
@@ -90,4 +103,6 @@ fn testinput1() {
 
 #[test]
 fn test2() {
+    let testinput = "3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green";
+    assert_eq!(game_power(&str_to_vec(&testinput)), 48);
 }
