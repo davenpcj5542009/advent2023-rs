@@ -7,7 +7,7 @@ const DEBUG:bool = cfg!(debug_assertions);
 
 fn check_adjacent(ln: usize,rg:&Range<usize>,sym_ln:usize,sym_pos:usize) -> bool {
     let retv = (sym_ln == ln || sym_ln + 1 == ln || ln + 1 == sym_ln) && ( sym_pos + 1 >= rg.start && sym_pos <= rg.end);
-    if DEBUG { eprintln!("[{ln},{rg:?}] for ({sym_ln},{sym_pos}) => {retv}") }
+    if DEBUG { eprintln!("[{ln},{rg:?}] adjacent to ({sym_ln},{sym_pos}) => {retv}") }
     return retv;
 }
 
@@ -39,15 +39,15 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
             if c.is_ascii_digit() || c == '.' {
                 continue;
             }
-            symbols.push((linenum,i as usize));
+            symbols.push((linenum,i as usize,c));
         }
     }
 
     // compute the result
     let mut result = 0;
-    for (ln,rg,sernum) in sernums {
+    for &(ln,ref rg,sernum) in sernums.iter() {
         if DEBUG { eprintln!("SN {sernum}:") }
-        for &(sym_ln,sym_pos) in symbols.iter() {            
+        for &(sym_ln,sym_pos,_sym) in symbols.iter() {            
             if check_adjacent(ln,&rg,sym_ln,sym_pos) {
                 result += sernum;
                 break; // we already found it, so no need to check more.
@@ -59,9 +59,30 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     println!("{result}");
 
     // PART TWO. 
-    // eprintln!("PART TWO");
-    // println!("{min_loc}");
+    eprintln!("PART TWO");
+    let mut result = 0;
+    for &(sym_ln,sym_pos,sym) in symbols.iter() {       
+        if sym != '*' {
+            continue;
+        }
+        if DEBUG { eprintln!("gear {sym_ln},{sym_pos}:") }
 
+        let mut near_gear = sernums.iter().filter_map(|&(ln, ref rg, sernum)| {
+            check_adjacent(ln,&rg,sym_ln,sym_pos).then(||sernum)
+        });
+
+        if DEBUG { eprintln!("near_gear: {near_gear:?}") }
+
+        match (near_gear.next(),near_gear.next(),near_gear.next()) {
+            (Some(first),Some(second),None) => {
+                if DEBUG { eprintln!("ratio: {}", (first * second)) }
+                result += first * second;
+            },
+            _ => if DEBUG { eprintln!("not a gear") },
+        }
+    }
+
+    println!("{result}");
     return Ok(());
 }
 
