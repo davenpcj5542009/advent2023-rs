@@ -20,6 +20,18 @@ fn get_discriminant_next(sensors:&[i32]) -> i32 {
     }
 }
 
+fn get_discriminant_prev(sensors:&[i32]) -> i32 {
+    let next:Vec<i32> = sensors.windows(2).map(|sns| sns[1] - sns[0]).collect();
+    if DEBUG { eprintln!(" {sensors:?} => {next:?}") }
+    if next.iter().any(|&sn| sn != 0) {
+        let r = sensors[0] - get_discriminant_prev(&next);
+        return r;
+    } else {
+        if DEBUG { eprintln!(" {}", sensors[0]) }        
+        return sensors[0];
+    }
+}
+
 fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // Mirage maintenance
     // puzzle input, line of values in a history
@@ -30,7 +42,7 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     while let Some(Ok(line)) = lines.next() {
         let sensors = str_to_vec(&line,0);
         // compute the result
-        let order_next = get_discriminant_next(&sensors);
+        let order_next = get_discriminant_prev(&sensors);
         if DEBUG { eprintln!("{sensors:?}, {order_next}") };
         result += order_next;
     }
@@ -68,4 +80,10 @@ fn testinput1() {
 fn test2() {
     let v = [1,2,3,4,5];
     assert_eq!(get_discriminant_next(&v), 6);
+}
+
+#[test]
+fn test3() {
+    let v = [1,2,3,4,5];
+    assert_eq!(get_discriminant_prev(&v), 0);
 }
