@@ -1,4 +1,4 @@
-use std::{io::{BufRead, BufReader}, path};
+use std::{io::{BufRead, BufReader}, path, fmt::{Display, Write}};
 
 use anyhow::{Error};
 
@@ -16,6 +16,14 @@ fn check_adjacent(directions: char, x: usize, y: usize, dist: &Vec<Vec<i32>>) ->
     unimplemented!();
 }
 
+fn check_connection(x:isize, y:isize, newx:isize, newy:isize, grid:&Vec<Vec<char>>) -> bool {
+    if newx < 0 || newy < 0 || newx >= grid.len() as isize || newy >= grid[0].len() as isize {
+        if DEBUG { eprintln!("CHECK [{newx},{newy}] out of bounds") };
+        return false;
+    }
+    return true;
+}
+
 // recursively follow the path from current postition, whose value must be known
 fn compute_follow_path(pathlen: i32, grid:&Vec<Vec<char>>, x:isize, y:isize, dist:&mut Vec<Vec<i32>>) {
     // bounds check
@@ -27,6 +35,10 @@ fn compute_follow_path(pathlen: i32, grid:&Vec<Vec<char>>, x:isize, y:isize, dis
         if DEBUG { eprintln!("dist [{x},{y}] already set {}", dist[x as usize][y as usize]) };
         return;
     }
+    if grid[x as usize][y as usize] == '.' {
+        return;
+    }
+
     dist[x as usize][y as usize] = pathlen;
 
     let direction = grid[x as usize][y as usize];
@@ -34,14 +46,14 @@ fn compute_follow_path(pathlen: i32, grid:&Vec<Vec<char>>, x:isize, y:isize, dis
     match direction {
         NE | NS | NW => {
             if DEBUG { eprintln!("{} NORTH: [{x},{}]", direction, y-1) };
-            compute_follow_path(pathlen+1, grid, x, y-1, dist);
+            compute_follow_path(pathlen+1, grid, x-1, y, dist);
         }, _ => (),
     }
 
     match direction {
         SE | NS | SW => {
             if DEBUG { eprintln!("{} SOUTH: [{x},{}]", direction, y+1) };
-            compute_follow_path(pathlen+1, grid, x, y+1, dist);
+            compute_follow_path(pathlen+1, grid, x+1, y, dist);
         }, _ => (),
     }
 
@@ -49,14 +61,14 @@ fn compute_follow_path(pathlen: i32, grid:&Vec<Vec<char>>, x:isize, y:isize, dis
     match direction {
         EW | SW | NW => {
             if DEBUG { eprintln!("{} WEST: [{},{y}]", direction, x-1) };
-            compute_follow_path(pathlen+1, grid, x-1, y, dist);
+            compute_follow_path(pathlen+1, grid, x, y-1, dist);
         }, _ => (),
     }
 
     match direction {
         EW | SE | NE => {
             if DEBUG { eprintln!("{} EAST: [{},{y}]", direction, x+1) };
-            compute_follow_path(pathlen+1, grid, x+1, y, dist);
+            compute_follow_path(pathlen+1, grid, x, y+1, dist);
         }, _ => (),
     }
 }
@@ -80,7 +92,20 @@ fn compute_distances(grid:&Vec<Vec<char>>) -> Vec<Vec<i32>> {
     }
     if DEBUG { eprintln!("START: [{x},{y}]") };
     dist[x][y] = 0;
+    let (x,y) = (x as isize,y as isize);
     // figure out which way start goes
+    if check_connection(x, y, x + 1, y , &grid) {
+        compute_follow_path(1, &grid, x + 1, y, &mut dist);
+    }
+    if check_connection(x, y, x - 1, y, &grid) {
+        compute_follow_path(1, &grid, x - 1, y, &mut dist);
+    }
+    if check_connection(x, y, x, y + 1, &grid) {
+        compute_follow_path(1, &grid, x, y + 1, &mut dist);
+    }
+    if check_connection(x, y, x - 1, y - 1, &grid) {
+        compute_follow_path(1, &grid, x, y - 1, &mut dist);
+    }
 
     compute_follow_path(0, grid, x as isize, y as isize, &mut dist);
 
@@ -119,6 +144,44 @@ fn main() -> Result<(),Error> {
     go(&mut std::io::stdin().lock())
 }
 
+#[derive(PartialEq)]
+struct Grid<'a,T:PartialEq> (&'a Vec<Vec<T>>);
+
+impl<'a, T:PartialEq> From<&'a Vec<Vec<T>>> for Grid<'a,T> {
+    fn from(g: &'a Vec<Vec<T>>) -> Self {
+        Self(g)
+    }
+}
+
+impl<'a> std::fmt::Debug for Grid<'a, char> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char('\n')?;
+        for v in self.0.iter() {
+            f.write_char('[')?;
+            for c in v.iter() {
+                f.write_char(*c)?;
+            }
+            f.write_str("],\n")?;
+        }
+        Ok(())
+    }
+}
+
+impl<'a> std::fmt::Debug for Grid<'a, i32> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char('\n')?;
+        for v in self.0.iter() {
+            f.write_char('[')?;
+            for i in v.iter() {
+                std::fmt::Debug::fmt(i, f)?;
+                f.write_str(", ")?;
+            }
+            f.write_str("],\n")?;
+        }
+        Ok(())
+    }
+}
+
 #[test]
 fn example() -> Result<(),Error> {
     let testinput = 
@@ -152,23 +215,47 @@ LJ.LJ";
 
     let grid = testinput.split_ascii_whitespace().map(|line|line.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
 
-    eprintln!("{grid:?}");
-
     let check_dist = compute_distances(&grid);
 
-    let distances:&[&[i32]] = &[
-        &[-1, -1, 4, 5, -1, ],
-        &[-1, 2, 3, 6, -1, ],
-        &[0, 1, -1, 7, 8, ],
-        &[1, 4, 5, 6, 7, ],
-        &[2, 3, -1, -1, -1, ],
-    ];
+    eprintln!("{:?}", Grid::from(&grid));
 
-   assert_eq!(check_dist, distances);
+    let distances = vec![
+        vec![-1, -1, 4, 5, -1, ],
+        vec![-1, 2, 3, 6, -1, ],
+        vec![0, 1, -1, 7, 8, ],
+        vec![1, 4, 5, 6, 7, ],
+        vec![2, 3, -1, -1, -1, ],
+    ];
+    eprintln!("{:?}", Grid::from(&check_dist));
+
+    assert_eq!(Grid::from(&check_dist), Grid::from(&distances));
 }
 
 #[test]
-fn test2() {
+fn testinput2() {
+    let testinput = 
+r"-L|F7
+7S-7|
+L|7||
+-L-J|
+L|-JF";
+
+    let grid = testinput.split_ascii_whitespace().map(|line|line.chars().collect::<Vec<char>>()).collect::<Vec<_>>();
+
+    let check_dist = compute_distances(&grid);
+
+    eprintln!("{:?}", Grid::from(&grid));
+
+    let distances = vec![
+        vec![-1, -1, -1, -1, -1, ],
+        vec![-1, 0, 1, 2, -1, ],
+        vec![-1, 1, -1, 3, -1, ],
+        vec![-1, 2, 3, 4, -1, ],
+        vec![-1, -1, -1, -1, -1, ],
+    ];
+    eprintln!("{:?}", Grid::from(&check_dist));
+
+    assert_eq!(Grid::from(&check_dist), Grid::from(&distances));
 }
 
 #[test]
