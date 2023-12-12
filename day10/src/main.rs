@@ -21,7 +21,13 @@ fn check_connection(x:isize, y:isize, newx:isize, newy:isize, grid:&Vec<Vec<char
         if DEBUG { eprintln!("CHECK [{newx},{newy}] out of bounds") };
         return false;
     }
-    return true;
+    match (newx-x,newy-y,grid[newx as usize][newy as usize]) {
+        (0,1, NW | EW | SW) => true,
+        (0,-1, NE | EW | SE ) => true,
+        (-1,0, SW | NS | SE ) => true,
+        (1,0,NW | NS | NE ) => true,
+        _ => false,
+    }
 }
 
 // recursively follow the path from current postition, whose value must be known
