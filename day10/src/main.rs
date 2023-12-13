@@ -12,7 +12,7 @@ const EW: char = '-';
 const SW: char = '7';
 const SE: char = 'F';
 
-fn check_adjacent(directions: char, x: usize, y: usize, dist: &Vec<Vec<i32>>) -> Option<i32> {
+fn check_adjacent(directions: char, x: usize, y: usize, grid: &Vec<Vec<char>>) -> Option<i32> {
     unimplemented!();
 }
 
@@ -29,6 +29,7 @@ fn check_connection(x:isize, y:isize, newx:isize, newy:isize, grid:&Vec<Vec<char
         _ => false,
     }
 }
+
 
 // recursively follow the path from current postition, whose value must be known
 fn compute_follow_path(pathlen: i32, grid:&Vec<Vec<char>>, x:isize, y:isize, dist:&mut Vec<Vec<i32>>) {
@@ -112,8 +113,6 @@ fn compute_distances(grid:&Vec<Vec<char>>) -> Vec<Vec<i32>> {
     if check_connection(x, y, x - 1, y - 1, &grid) {
         compute_follow_path(1, &grid, x, y - 1, &mut dist);
     }
-
-    compute_follow_path(0, grid, x as isize, y as isize, &mut dist);
 
     return dist;
 }
