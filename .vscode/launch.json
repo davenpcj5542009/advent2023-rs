@@ -7,16 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'my-project'",
+            "name": "Debug unit tests",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=day5",
-                    "--package=day5",
+                    "--bin=day11",
+                    "--package=day11",
                 ],
                 "filter": {
-                    "name": "day5",
+                    "name": "day11",
                     "kind": "bin"
                 }
             },
