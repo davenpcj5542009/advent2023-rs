@@ -67,20 +67,57 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // let mut lines = BufReader::new(input).lines();
 
     // find lines of symmetry
-    let mut summary:usize = 0;
-    while let Ok(grid) = load_grid(input) {
+    let mut summary1:usize = 0;
+    let mut summary2:usize = 0;
+    while let Ok(mut grid) = load_grid(input) {
         if DEBUG { eprintln!("grid: {:?}", Grid::from(&grid)) };
-        summary += find_reflections(&grid).iter().copied().sum::<usize>();
-        summary += find_reflections_horiz(&grid).iter().map(|&x|x*100).sum::<usize>();
+        let mut v = find_reflections(&grid);
+        let mut h = find_reflections_horiz(&grid);
+        summary1 += v.iter().copied().sum::<usize>();
+        summary1 += h.iter().map(|&x|x*100).sum::<usize>();
+
+        // part two, do the smudge checking.
+        for row in 0..grid.len() {
+            for col in 0..grid[0].len() {
+                // smudge
+                if DEBUG { eprintln!("checking smudge ({row},{col}): ")}
+                let old = grid[row][col];
+                grid[row][col] = match old {
+                    '.' => '#',
+                    '#' => '.',
+                    _ => panic!("bad grid"),
+                };
+                let mut t = find_reflections(&grid);
+                t.retain(|x|!v.contains(x));
+                if t.len() == 1 {
+                    if DEBUG { eprintln!("########### NEW symmetry in col {}", t[0])}
+                    // add this one so it won't get double-counted
+                    v.push(t[0]);
+                    summary2 += t[0];
+                }
+                let mut t = find_reflections_horiz(&grid);
+                t.retain(|x|!h.contains(x));
+                if t.len() == 1 {
+                    if DEBUG { eprintln!("########### NEW symmetry in row {}", t[0])}
+                    // add this one so it won't get double-counted
+                    h.push(t[0]);
+                    summary2 += 100 * t[0];
+                }
+                // restore smudge as real
+                grid[row][col] = old;
+            }
+        }
     }
 
+    println!("{summary1}");
+
     // PART TWO
-    // eprintln!("PART TWO");
+    eprintln!("PART TWO");
 
-    // follow the map steps
+    // find smudges
 
-    // output the steps required
-    println!("{summary}");
+    // output the new symmetries
+    println!("{summary2}");
 
     return Ok(());
 }
