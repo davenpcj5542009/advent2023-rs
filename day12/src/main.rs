@@ -16,25 +16,52 @@ fn str_to_vec(somestr: &str) -> (String,Vec<i32>) {
 
 // may need our own FSM to match these
 // do a recursive backtracking match
-fn match_groups(remaining: &str, groups: &Vec<i32>, matches:&mut Vec<Range<u32>>) {
+pub fn match_groups(pos:usize, remaining: &str, groups: &[i32], matches:&mut Vec<Range<usize>>) {
     let mut i = 0;
+    if DEBUG { eprintln!("in [{pos}..]'{remaining}', matching {groups:?} ") };
 
     // consume the empty space, if any
-    while i < str.len() && str[i] == '.' {
+    while i < remaining.len() && remaining.as_bytes()[i] == b'.' {
         i += 1;
     }
-    // consume the first "groups", if possible
-    for i in 0..str.len() {
 
+    if i == remaining.len() && groups.len() == 0 {
+        if DEBUG { eprintln!("matched ({pos}..{i}) ") };
+        matches.push(pos..i);
+        return;
     }
+
+    // consume the first "groups", if possible
+    let mut n = 0;
+    while i < remaining.len() && n < groups[0] && (remaining.as_bytes()[i] == b'#' || remaining.as_bytes()[i] == b'?') {
+        n += 1;
+        i += 1;
+    }
+
+    if n < groups[0] || (i < remaining.len() && remaining.as_bytes()[i] == b'#') {
+        if DEBUG { eprintln!("no match segment {} at {i}", groups[0]) };
+        return;
+    }
+
+    if i == remaining.len() && n == groups[0] && groups.len() == 1{
+        if DEBUG { eprintln!("matched ({pos}..{i}) ") };
+        matches.push(pos..i);
+        return;
+    }
+
+    // must consume at least one separator
+    i += 1;
+
+    // try to match the rest
+    match_groups(pos, &remaining[i..], &groups[1..], matches);
 }
 
 fn build_regex(groups: &Vec<i32>) -> Regex {
     let re_str:String = groups.iter().map(|i|format!("[#\\?]{{{i}}}")).collect::<Vec<String>>().join("[\\.\\?]+");
 
     if DEBUG { eprintln!("{groups:?} => {re_str}") };
-    return Regex::new(&re_str).configure(Config::new().match_kind());
-    //return Regex::new(&re_str).unwrap();
+    //return Regex::new(&re_str).configure(Config::new().match_kind(MatchKind::All));
+    return Regex::new(&re_str).unwrap();
 }
 
 fn go(input:&mut dyn BufRead) -> Result<(),Error>{
@@ -50,7 +77,9 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
         let re = build_regex(&groups);
 
         // count matches
-        let matches:Vec<_> = re.find_iter(&springs).map(|m|m.as_str()).collect();
+        let mut matches = Vec::new();
+        match_groups(0, &springs, &groups, &mut matches);
+        //let matches:Vec<_> = re.find_iter(&springs).map(|m|m.as_str()).collect();
         if DEBUG { eprintln!("matches: {matches:?}") };
         let steps = matches.len();
         if DEBUG { eprintln!("-> {steps:?}") };
