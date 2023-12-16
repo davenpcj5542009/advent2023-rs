@@ -79,7 +79,47 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     println!("{squares}");
 
     // PART TWO
-    // eprintln!("PART TWO");
+    eprintln!("PART TWO");
+
+    let mut max_squares = squares;
+    // find the entry point and direction which maximizes the energy.
+    for left in 1..grid.len() {
+        energy.iter_mut().flatten().for_each(|v|*v=0);
+        compute_follow_path('E', &grid, left as isize, 0, &mut energy);
+        let squares = energy.iter().flatten().filter(|&v|*v!=0).count();
+        if squares > max_squares {
+            max_squares = squares;
+        }
+    }
+
+    for right in 0..grid.len() {
+        energy.iter_mut().flatten().for_each(|v|*v=0);
+        compute_follow_path('W', &grid, right as isize, grid[0].len()as isize-1, &mut energy);
+        let squares = energy.iter().flatten().filter(|&v|*v!=0).count();
+        if squares > max_squares {
+            max_squares = squares;
+        }
+    }
+
+    for up in 0..grid[0].len() {
+        energy.iter_mut().flatten().for_each(|v|*v=0);
+        compute_follow_path('N', &grid, grid.len() as isize-1, up as isize, &mut energy);
+        let squares = energy.iter().flatten().filter(|&v|*v!=0).count();
+        if squares > max_squares {
+            max_squares = squares;
+        }
+    }
+
+    for down in 0..grid[0].len() {
+        energy.iter_mut().flatten().for_each(|v|*v=0);
+        compute_follow_path('S', &grid, 0, down as isize, &mut energy);
+        let squares = energy.iter().flatten().filter(|&v|*v!=0).count();
+        if squares > max_squares {
+            max_squares = squares;
+        }
+    }
+
+    println!("{max_squares}");
 
     return Ok(());
 }
