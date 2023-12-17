@@ -14,6 +14,7 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
     // puzzle input  "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53"
     let mut lines = BufReader::new(input).lines();
 
+    let mut cards = Vec::new();
     let mut points = 0;
     while let Some(Ok(some_str)) = lines.next() {
         let (cardstr, numstr) = some_str.split_once(" | ").unwrap();
@@ -25,14 +26,29 @@ fn go(input:&mut dyn BufRead) -> Result<(),Error>{
         if matches > 0 {
             points += 1<<(matches-1);
         }
+        cards.push((card,matches));
     }
 
     // output the result
     println!("{points}");
 
     // PART TWO. 
-    // eprintln!("PART TWO");
-    // println!("{min_loc}");
+    eprintln!("PART TWO");
+
+    let mut cardcount = Vec::new();
+    // start with one of each
+    cardcount.resize(cards.len(), 1);
+
+    // for each card, increment the count by the number of matches
+    for i in 0..cards.len() {
+        let matches = cards[i].1;
+        for n in 0..matches {
+            cardcount[i+1+n] += cardcount[i];
+        }
+    }
+
+    let result:u32 = cardcount.iter().sum();
+    println!("{result}");
 
     return Ok(());
 }
